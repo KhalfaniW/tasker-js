@@ -1,5 +1,5 @@
 import { postData } from "./client-lib.js";
-
+//run this in browser to connect to server
 (async () => {
   try {
     const url = `http://192.168.1.160`; //TODO handle this changing and set ports
