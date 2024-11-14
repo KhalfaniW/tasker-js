@@ -1,27 +1,41 @@
 import { postData } from "./client-lib.js";
-//run this in browser to connect to server
-(async () => {
-  try {
-    const url = `http://192.168.1.160`; //TODO handle this changing and set ports
 
-    const serverURL = `${url}:3000/events`;
+const isNode = typeof window === "undefined";
+
+if (isNode) {
+  (async () => {
+    globalThis.fetch = await import("node-fetch");
+    globalThis.EventSource = (await import("eventsource")).default;
+    globalThis.flash = console.log;
+    globalThis.vibrate = () => {};
+    globalThis.exit = () => {};
+  })();
+}
+
+/*global flash*/
+export async function initializeClient(
+  url = `http://192.168.1.160`,
+  port = 3000,
+  flash = globalThis.flash
+) {
+  try {
+    const serverURL = `${url}:${port}/events`;
     let eventSource = new EventSource(serverURL);
     let reconnectInterval = null;
 
     globalThis.postData = postData;
     globalThis.url = url;
-    globalThis.log = (str) => postData(`${url}:3000/log`, str);
+    globalThis.log = (str) => postData(`${url}:${port}/log`, str);
     globalThis.sLog = async (str) => {
       const response = await fetch(
-        `${url}:3000/s-log?log=${encodeURIComponent(str)}`,
+        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`
       );
     };
     globalThis.l = async (str) => {
       const response = await fetch(
-        `${url}:3000/s-log?log=${encodeURIComponent(str)}`,
+        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`
       );
     };
-  
     globalThis.eventSource = eventSource;
 
     eventSource.onopen = () => {
@@ -33,20 +47,33 @@ import { postData } from "./client-lib.js";
     };
 
     eventSource.onmessage = (event) => {
+      flash(["data", event.data]);
       if (event.data.length < 3) {
         vibrate(120);
         flash("short_Message from server: " + event.data);
         return;
       }
       if (event.data === "close") {
-        sLog("[remote] Closing connection...");
-        flash("close");
-        eventSource.close(); // Close the EventSource connection
+        // sLog("[remote] Closing connection...");
+        // flash("close");
+        // eventSource.close(); // Close the EventSource connection
         exit();
         return;
       }
+
+      if (event.data === "Test message from server") {
+        flash("Received test message");
+        eventSource.close(); // Close the EventSource connection
+      }
+      if (event.data.includes("::")) {
+        const [command, value] = event.data.split("::");
+        if (command == flash) {
+          flash(value);
+        }
+        return;
+      }
       try {
-        (0, eval)(event.data);
+        // (0, eval)(event.data);
       } catch (e) {
         flash(`ERROR ${e.message}`);
       }
@@ -62,8 +89,7 @@ import { postData } from "./client-lib.js";
       if (eventSource.readyState === EventSource.CLOSED) {
         flash("Disconnected from server. Attempting to reconnect...");
         console.log("Attempting to reconnect...");
-          exit();
-
+        exit();
       }
     };
 
@@ -76,9 +102,9 @@ import { postData } from "./client-lib.js";
       }, 1000);
     };
     flash("loaded");
-    return;
+    return eventSource; // Return eventSource for testing purposes
   } catch (e) {
     flash(JSON.stringify(e));
     exit();
   }
-})();
+}

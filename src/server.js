@@ -2,8 +2,16 @@ import express from "express";
 import { createInterface } from "readline";
 import path from "path";
 import fs from "fs";
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
-// const server = createServer(app);
+const PORT = process.env.PORT || 3000;
 
 const clients = [null];
 
@@ -16,6 +24,8 @@ app.get("/events", (req, res) => {
   // Add client to the clients set
   clients[0] = res;
   console.log("opened");
+  clients[0]?.write(`data: hello\n\n`);
+
   // Remove client on disconnect
   req.on("close", () => {
     clients[0]?.write(`data: close\n\n`);
@@ -26,10 +36,7 @@ app.get("/events", (req, res) => {
   });
 });
 
-app.use(
-  "/code",
-  express.static(path.join(import.meta.dirname, "../build/client.js")),
-);
+app.use("/code", express.static(path.join(__dirname, "../build/client.js")));
 
 app.post("/log", (req, res) => {
   const logData = req.body;
@@ -45,30 +52,18 @@ app.get("/s-log", (req, res) => {
   res.send(`loged ${log}`);
 });
 
-app.get("/s", (req, res) => {
-  console.log("ssssssss");
-  //   const { log: inputLog } = req.query; // Destructure the query parameter
-  //   console.log({ inputLog });
-  res.send(`loged s`);
-});
-
-// Broadcast message to all connected clients
-function broadcastMessage(message) {
-  for (const client of clients) {
-    client?.write(`data: ${message}\n\n`);
+app.get("/send-test-message", (req, res) => {
+  if (clients[0]) { 
+      // console.log("c00", clients[0]);
+    clients[0].write(`data: Test message from server\n\n`);
+    clients[0].write(`data: close\n\n`);
+    res.status(200).send("Test message sent");
+  } else {
+    res.status(200).send("No client connected");
   }
-}
-
-const rl = createInterface({
-  input: process.stdin,
-  output: process.stdout,
 });
 
-console.log("Type  message to broadcast to connected clients:");
-rl.on("line", (line) => {
-  broadcastMessage(line);
-});
-
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
-});
+// app.listen(PORT, () => {
+//   console.log(`Server running on http://localhost:${PORT}`);
+// });
+export { app };
