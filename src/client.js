@@ -15,7 +15,7 @@ if (isNode) {
 export async function initializeClient(
   url = `http://192.168.1.160`,
   port = 3000,
-  flash = globalThis.flash,
+  logger = globalThis.flash
 ) {
   try {
     const serverURL = `${url}:${port}/events`;
@@ -27,18 +27,18 @@ export async function initializeClient(
     globalThis.log = (str) => postData(`${url}:${port}/log`, str);
     globalThis.sLog = async (str) => {
       const response = await fetch(
-        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
+        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`
       );
     };
     globalThis.l = async (str) => {
       const response = await fetch(
-        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
+        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`
       );
     };
     globalThis.eventSource = eventSource;
 
     eventSource.onopen = () => {
-      flash("Connected to server");
+      logger("Connected to server");
       if (reconnectInterval) {
         clearInterval(reconnectInterval);
         reconnectInterval = null;
@@ -46,14 +46,10 @@ export async function initializeClient(
     };
 
     eventSource.onmessage = (event) => {
-      flash(["data", event.data]);
+      logger(["data", event.data]);
 
-      if (event.data.length < 3) {
-        vibrate(120);
-        flash("short_Message from server: " + event.data);
-        return;
-      }
       if (event.data === "close") {
+        eventSource.close();
         exit();
         return;
       }
@@ -61,38 +57,38 @@ export async function initializeClient(
       if (event.data.startsWith("cmd::")) {
         const command = event.data.substring(5);
         try {
-          flash(command);
+          logger(command);
           // (0, eval)(command);
         } catch (e) {
-          flash(`Command execution error: ${e.message}`);
+          logger(`Command execution error: ${e.message}`);
         }
         return;
       }
 
       if (event.data === "Test message from server") {
-        flash("Received test message");
+        logger("Received test message");
       }
       if (event.data.includes("::")) {
         const [command, value] = event.data.split("::");
-        flash(value);
+        logger(value);
         return;
       }
       try {
         // (0, eval)(event.data);
       } catch (e) {
-        flash(`ERROR ${e.message}`);
+        logger(`ERROR ${e.message}`);
       }
     };
 
     eventSource.onerror = (error) => {
       const errorMessage = error.message || "Unknown error";
       if (eventSource.readyState !== 0)
-        flash(`Er ${eventSource.readyState}` + JSON.stringify(error));
+        logger(`Er ${eventSource.readyState}` + JSON.stringify(error));
 
       if (!reconnectInterval) reconnect();
 
       if (eventSource.readyState === EventSource.CLOSED) {
-        flash("Disconnected from server. Attempting to reconnect...");
+        logger("Disconnected from server. Attempting to reconnect...");
         console.log("Attempting to reconnect...");
         exit();
       }
@@ -101,15 +97,15 @@ export async function initializeClient(
     const reconnect = () => {
       reconnectInterval = setInterval(() => {
         if (reconnectInterval) return; //idk why this insn't null
-        flash("33Reconnecting...");
+        logger("33Reconnecting...");
         console.log({ reconnectInterval });
         // eventSource = new EventSource(serverURL);
       }, 1000);
     };
-    flash("loaded");
+    logger("loaded");
     return eventSource; // Return eventSource for testing purposes
   } catch (e) {
-    flash(JSON.stringify(e));
+    logger(JSON.stringify(e));
     exit();
   }
 }
