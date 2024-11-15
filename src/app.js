@@ -29,7 +29,7 @@ const logger = winston.createLogger({
   ),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: "server.log" }),
+    new winston.transports.File({ filename: "./tmp/server.log" }),
   ],
 });
 
@@ -44,6 +44,12 @@ function sendMessageToClient(client, message) {
   }
 }
 
+function removeClient() {
+  sendMessageToClient(clients[0], "close");
+  logger.verbose("Client connection closed");
+
+  clients[0] = null;
+}
 app.get("/events", (req, res) => {
   // Set SSE headers
   res.setHeader("Content-Type", "text/event-stream");
@@ -56,10 +62,7 @@ app.get("/events", (req, res) => {
   logger.verbose("Client connection opened");
   // Remove client on disconnect
   req.on("close", () => {
-    sendMessageToClient(clients[0], "close");
-    logger.verbose("Client connection closed");
-
-    clients[0] = null;
+    removeClient();
   });
 });
 
@@ -104,5 +107,31 @@ app.post("/send-command", (req, res) => {
     res.status(200).send("No client connected");
   }
 });
+function shutdown(server) {
+  sendMessageToClient(clients[0], "close");
+  logger.verbose("Client connection closed");
+  clients[0] = null;
+  server.close(() => {});
+  server.closeAllConnections();
+}
 
-export { app };
+const myApp = {
+  listen: (...params) => {
+    const server = app.listen(...params);
+    const shutdown = async () => {
+      removeClient();
+      await new Promise((resolve) =>
+        server.close(() => {
+          // will not run call back until server.closeAllConnection() because of sse connection
+          logger.debug("Closed for disconnection");
+          resolve();
+        }),
+      );
+
+      server.closeAllConnections();
+    };
+    return { server, shutdown };
+  },
+};
+
+export default myApp;

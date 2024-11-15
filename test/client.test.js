@@ -2,13 +2,13 @@ import express from "express";
 import { jest } from "@jest/globals";
 import fetch from "node-fetch";
 import { initializeClient } from "../src/client.js";
-import { app } from "../src/app.js";
+import app from "../src/app.js";
 import winston from "winston";
 jest.setTimeout(500);
 const logger = winston.createLogger({
-  level: process.env.DEBUG  ? "debug" : "info",
+  level: process.env.DEBUG ? "debug" : "info",
   format: winston.format.combine(
-    winston.format.printf(({ timestamp, level, message }) => { 
+    winston.format.printf(({ timestamp, level, message }) => {
       return `${timestamp} ${level}: ${message}`;
     }),
   ),
@@ -22,9 +22,10 @@ describe("Client-Server Integration Test", () => {
   let port;
   let flashMock;
   let eventsource;
+  let server, shutdown;
   beforeAll(async () => {
     const listener = await new Promise((resolve) => {
-      const server = app.listen(0, () => resolve(server));
+      ({ server, shutdown } = app.listen(0, () => resolve(server)));
     });
     port = listener.address().port;
   });
@@ -38,12 +39,10 @@ describe("Client-Server Integration Test", () => {
     delete global.flash;
   });
 
-  afterAll((done) => {
-    if (app && app.close) {
-      app.close(done);
-    } else {
-      done();
-    }
+  afterAll(async () => {
+    server.close();
+    server.closeAllConnections();
+      //TODO Figure out why safe shutdown breaks other tests
   });
 
   test("Connect", async () => {

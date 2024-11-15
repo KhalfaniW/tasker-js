@@ -15,7 +15,7 @@ if (isNode) {
 export async function initializeClient(
   url = `http://192.168.1.160`,
   port = 3000,
-  logger = globalThis.flash
+  logger = globalThis.flash,
 ) {
   try {
     const serverURL = `${url}:${port}/events`;
@@ -27,12 +27,12 @@ export async function initializeClient(
     globalThis.log = (str) => postData(`${url}:${port}/log`, str);
     globalThis.sLog = async (str) => {
       const response = await fetch(
-        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`
+        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
       );
     };
     globalThis.l = async (str) => {
       const response = await fetch(
-        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`
+        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
       );
     };
     globalThis.eventSource = eventSource;
@@ -49,6 +49,7 @@ export async function initializeClient(
       logger(["data", event.data]);
 
       if (event.data === "close") {
+        flash("CLOSED");
         eventSource.close();
         exit();
         return;
@@ -81,28 +82,31 @@ export async function initializeClient(
     };
 
     eventSource.onerror = (error) => {
-      const errorMessage = error.message || "Unknown error";
-      if (eventSource.readyState !== 0)
-        logger(`Er ${eventSource.readyState}` + JSON.stringify(error));
-
-      if (!reconnectInterval) reconnect();
-
-      if (eventSource.readyState === EventSource.CLOSED) {
-        logger("Disconnected from server. Attempting to reconnect...");
-        console.log("Attempting to reconnect...");
-        exit();
+      logger({ reconnectInterval });
+      logger("Connection error:", error);
+      if (!reconnectInterval) {
+        logger("Disconnected; reconnecting");
+        reconnect();
       }
     };
 
     const reconnect = () => {
+      if (reconnectInterval) return;
+
       reconnectInterval = setInterval(() => {
-        if (reconnectInterval) return; //idk why this insn't null
-        logger("33Reconnecting...");
-        console.log({ reconnectInterval });
-        // eventSource = new EventSource(serverURL);
-      }, 1000);
+        logger("attempt Reconnecting...");
+        eventSource = new EventSource(serverURL);
+        eventSource.onopen = () => {
+          logger("Reconnected to server");
+          clearInterval(reconnectInterval);
+          reconnectInterval = null;
+        };
+        eventSource.onerror = (error) => {
+          logger("Reconnection attempt failed:", error);
+        };
+      }, 100);
     };
-    logger("loaded");
+
     return eventSource; // Return eventSource for testing purposes
   } catch (e) {
     logger(JSON.stringify(e));
