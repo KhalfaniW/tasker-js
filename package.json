@@ -9,10 +9,10 @@
     "server": "npx nodemon src/server.js",
     "build": "esbuild ./src/client --bundle --outdir=build --watch=forever",
     "run-client": "node --watch build/client.js",
-    "test": "npm run jest",
+    "test": "npm run jest --",
     "tw": "npm run jest --- --watch",
     "debug": "NODE_INSPECT_RESUME_ON_START=1 npm run jest",
-    "jest": "node --experimental-vm-modules --no-warnings  node_modules/jest/bin/jest.js"
+    "jest": "node --experimental-vm-modules --no-warnings node_modules/jest/bin/jest.js"
   },
   "keywords": [],
   "author": "",

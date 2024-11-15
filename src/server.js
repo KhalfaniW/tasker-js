@@ -11,6 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.use(express.json()); // Add this line to parse JSON bodies
 const PORT = process.env.PORT || 3000;
 
 const clients = [null];
@@ -21,15 +22,13 @@ app.get("/events", (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  // Add client to the clients set
   clients[0] = res;
+  //data needs to be sent for first onopen to be called
+  clients[0].write(`data: open\n\n`);
   console.log("opened");
-  clients[0]?.write(`data: hello\n\n`);
-
   // Remove client on disconnect
   req.on("close", () => {
     clients[0]?.write(`data: close\n\n`);
-
     console.log("closed");
 
     clients[0] = null;
@@ -53,11 +52,25 @@ app.get("/s-log", (req, res) => {
 });
 
 app.get("/send-test-message", (req, res) => {
-  if (clients[0]) { 
-      // console.log("c00", clients[0]);
+  if (clients[0]) {
     clients[0].write(`data: Test message from server\n\n`);
-    clients[0].write(`data: close\n\n`);
-    res.status(200).send("Test message sent");
+    res.status(200).send("Test message sent"); 
+  } else {
+    res.status(200).send("No client connected");
+  } 
+});
+
+app.post("/send-command", (req, res) => {
+  const { cmd } = req.body;
+  if (!cmd) {
+    res.status(400).send("Command parameter 'cmd' is required in request body");
+    return;
+  }
+
+  if (clients[0]) {
+      console.log('sENDING MESSAGE')
+    clients[0].write(`data: cmd::${cmd}\n\n`);
+    res.status(200).send(`Command "${cmd}" sent successfully`);
   } else {
     res.status(200).send("No client connected");
   }

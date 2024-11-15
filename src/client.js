@@ -1,11 +1,10 @@
 import { postData } from "./client-lib.js";
-
+import fetch from "node-fetch";
+import EventSource from "eventsource";
 const isNode = typeof window === "undefined";
 
 if (isNode) {
   (async () => {
-    globalThis.fetch = await import("node-fetch");
-    globalThis.EventSource = (await import("eventsource")).default;
     globalThis.flash = console.log;
     globalThis.vibrate = () => {};
     globalThis.exit = () => {};
@@ -16,7 +15,7 @@ if (isNode) {
 export async function initializeClient(
   url = `http://192.168.1.160`,
   port = 3000,
-  flash = globalThis.flash
+  flash = globalThis.flash,
 ) {
   try {
     const serverURL = `${url}:${port}/events`;
@@ -28,12 +27,12 @@ export async function initializeClient(
     globalThis.log = (str) => postData(`${url}:${port}/log`, str);
     globalThis.sLog = async (str) => {
       const response = await fetch(
-        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`
+        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
       );
     };
     globalThis.l = async (str) => {
       const response = await fetch(
-        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`
+        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
       );
     };
     globalThis.eventSource = eventSource;
@@ -48,28 +47,34 @@ export async function initializeClient(
 
     eventSource.onmessage = (event) => {
       flash(["data", event.data]);
+
       if (event.data.length < 3) {
         vibrate(120);
         flash("short_Message from server: " + event.data);
         return;
       }
       if (event.data === "close") {
-        // sLog("[remote] Closing connection...");
-        // flash("close");
-        // eventSource.close(); // Close the EventSource connection
         exit();
+        return;
+      }
+
+      if (event.data.startsWith("cmd::")) {
+        const command = event.data.substring(5);
+        try {
+          flash(command);
+          // (0, eval)(command);
+        } catch (e) {
+          flash(`Command execution error: ${e.message}`);
+        }
         return;
       }
 
       if (event.data === "Test message from server") {
         flash("Received test message");
-        eventSource.close(); // Close the EventSource connection
       }
       if (event.data.includes("::")) {
         const [command, value] = event.data.split("::");
-        if (command == flash) {
-          flash(value);
-        }
+        flash(value);
         return;
       }
       try {
