@@ -5,14 +5,14 @@ import winston from "winston";
 import { jest } from "@jest/globals";
 
 jest.setTimeout(600);
-  
+
 const logger = winston.createLogger({
-  level: process.env.DEBUG ? "debug" : "info",
+  level: process.env.DEBUG  ? "debug" : "info",
 
   format: winston.format.combine(
     winston.format.printf(({ level, message }) => {
       return `${level}: ${message}`;
-    }),
+    })
   ),
   transports: [new winston.transports.Console()],
 });
@@ -51,13 +51,13 @@ describe("Client Reconnection Test", () => {
       server.close(() => {
         logger.debug("Closed on it's own");
         resolve();
-      }),
+      })
     );
     server = app.listen(port);
   });
 
   test("Client reconnects after server disconnect", async () => {
-    const eventSource = await initializeClient("http://localhost", port);
+      const eventSource = await initializeClient("http://localhost", port,{reconnectInterval: 40});
     logger.debug("setup");
     await new Promise((resolve) => setTimeout(resolve, 150));
 
@@ -77,7 +77,7 @@ describe("Client Reconnection Test", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     logger.debug(
-      `mock calls ${JSON.stringify(flashMock.mock.calls.map((p) => p[0]))}`,
+      `mock calls ${JSON.stringify(flashMock.mock.calls.map((p) => p[0]))}`
     );
     expect(flashMock).toHaveBeenCalledWith("Reconnected to server");
   });

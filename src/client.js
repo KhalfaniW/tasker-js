@@ -1,6 +1,8 @@
 import { postData } from "./client-lib.js";
 import fetch from "node-fetch";
 import EventSource from "eventsource";
+import { Observable, timer } from "rxjs";
+import { retryWhen, delayWhen, tap } from "rxjs/operators";
 const isNode = typeof window === "undefined";
 
 if (isNode) {
@@ -15,12 +17,10 @@ if (isNode) {
 export async function initializeClient(
   url = `http://192.168.1.160`,
   port = 3000,
-  logger = globalThis.flash,
+    { logger = globalThis.flash, reconnectInterval=1000 }={}, 
 ) {
   try {
     const serverURL = `${url}:${port}/events`;
-    let eventSource = new EventSource(serverURL);
-    let reconnectInterval = null;
 
     globalThis.postData = postData;
     globalThis.url = url;
@@ -35,79 +35,90 @@ export async function initializeClient(
         `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
       );
     };
-    globalThis.eventSource = eventSource;
 
-    eventSource.onopen = () => {
-      logger("Connected to server");
-      if (reconnectInterval) {
-        clearInterval(reconnectInterval);
-        reconnectInterval = null;
-      }
-    };
+    let isReconnecting = false; // Add this variable
+    let eventSource; // Declare eventSource in the outer scope
 
-    eventSource.onmessage = (event) => {
-      logger(["data", event.data]);
+    const connect$ = new Observable((subscriber) => {
+      logger("Attempting to connect...");
+      eventSource = new EventSource(serverURL); // Assign to outer scope variable
 
-      if (event.data === "close") {
-        flash("CLOSED");
-        eventSource.close();
-        exit();
-        return;
-      }
-
-      if (event.data.startsWith("cmd::")) {
-        const command = event.data.substring(5);
-        try {
-          logger(command);
-          // (0, eval)(command);
-        } catch (e) {
-          logger(`Command execution error: ${e.message}`);
-        }
-        return;
-      }
-
-      if (event.data === "Test message from server") {
-        logger("Received test message");
-      }
-      if (event.data.includes("::")) {
-        const [command, value] = event.data.split("::");
-        logger(value);
-        return;
-      }
-      try {
-        // (0, eval)(event.data);
-      } catch (e) {
-        logger(`ERROR ${e.message}`);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      logger({ reconnectInterval });
-      logger("Connection error:", error);
-      if (!reconnectInterval) {
-        logger("Disconnected; reconnecting");
-        reconnect();
-      }
-    };
-
-    const reconnect = () => {
-      if (reconnectInterval) return;
-
-      reconnectInterval = setInterval(() => {
-        logger("attempt Reconnecting...");
-        eventSource = new EventSource(serverURL);
-        eventSource.onopen = () => {
+      eventSource.onopen = () => {
+        if (isReconnecting) {
           logger("Reconnected to server");
-          clearInterval(reconnectInterval);
-          reconnectInterval = null;
-        };
-        eventSource.onerror = (error) => {
-          logger("Reconnection attempt failed:", error);
-        };
-      }, 100);
-    };
+          isReconnecting = false;
+        } else {
+          logger("Connected to server");
+        }
+      };
 
-    return eventSource; // Return eventSource for testing purposes
+      eventSource.onmessage = (event) => {
+        subscriber.next(event);
+      };
+
+      eventSource.onerror = () => {
+        subscriber.error(new Error("Connection lost"));
+      };
+
+      return () => {
+        eventSource.close();
+      };
+    });
+
+    connect$
+      .pipe(
+        retryWhen((errors) =>
+          errors.pipe(
+            tap(() => {
+              logger("Disconnected; reconnecting");
+              isReconnecting = true;
+            }),
+            delayWhen(() => timer(reconnectInterval)),
+          ),
+        ),
+      )
+      .subscribe(
+        (event) => {
+          logger(["data", event.data]);
+
+          if (event.data === "close") {
+            flash("CLOSED");
+            eventSource.close(); // eventSource is now accessible
+            exit();
+            return;
+          }
+
+          if (event.data.startsWith("cmd::")) {
+            const command = event.data.substring(5);
+            try {
+              logger(command);
+              // (0, eval)(command);
+            } catch (e) {
+              logger(`Command execution error: ${e.message}`);
+            }
+            return;
+          }
+
+          if (event.data === "Test message from server") {
+            logger("Received test message");
+          }
+          if (event.data.includes("::")) {
+            const [command, value] = event.data.split("::");
+            logger(value);
+            return;
+          }
+          try {
+            // (0, eval)(event.data);
+          } catch (e) {
+            logger(`ERROR ${e.message}`);
+          }
+        },
+        (error) => {
+          logger("Failed to reconnect:", error);
+        },
+      );
+
+    return eventSource; // Return eventSource if needed
   } catch (e) {
     logger(JSON.stringify(e));
     exit();
