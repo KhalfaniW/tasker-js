@@ -15,9 +15,50 @@ if (isNode) {
 } else {
   (async () => {
     const port = 3000;
+    const url = baseUrl;
 
+    //console.error will cause tasker to exit
+    console.error = (...params) => globalThis.flash(`ERROR:: ${params}`);
+    globalThis.postData = postData;
+    globalThis.url = url;
+    globalThis.log = async (str) => {
+      try {
+        await postData(`${url}:${port + 1}/log`, String(str));
+      } catch (err) {
+        console.error("Error in log:", err);
+      }
+    };
+    globalThis.sLog = async (str) => {
+      try {
+        const response = await fetch(
+          `${url}:${port + 1}/s-log?log=${encodeURIComponent(String(str))}`,
+        );
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+      } catch (err) {
+        console.error("Error in sLog:", err);
+      }
+    };
+    globalThis.l = async (str) => {
+      try {
+        const response = await fetch(
+          `${url}:${port + 1}/s-log?log=${encodeURIComponent(String(str))}`,
+        );
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+      } catch (err) {
+        console.error("Error in l:", err);
+      }
+    };
     window.client = await initializeClient(baseUrl, port, {
-      logger: (str) => postData(`${baseUrl}:${port}/log`, str),
+      logger: async (str) => {
+        try {
+          await sLog(str);
+        } catch (err) {
+          globalThis.flash(err, "logging-slog-error", err);
+        } finally {
+        }
+      },
     });
     window.initializeClient = initializeClient;
   })();
@@ -31,19 +72,6 @@ export async function initializeClient(
   try {
     const serverURL = `${url}:${port}/events`;
 
-    globalThis.postData = postData;
-    globalThis.url = url;
-    globalThis.log = (str) => postData(`${url}:${port}/log`, str);
-    globalThis.sLog = async (str) => {
-      const response = await fetch(
-        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
-      );
-    };
-    globalThis.l = async (str) => {
-      const response = await fetch(
-        `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
-      );
-    };
     logger("initializing");
     let isReconnecting = false; // Add this variable
     let eventSource; // Declare eventSource in the outer scope
@@ -88,17 +116,19 @@ export async function initializeClient(
       )
       .subscribe(
         (event) => {
-          logger(["data", event.data]);
+          // Decode the incoming data
+          const decodedData = atob(event.data);
+          logger(["data", decodedData]);
 
-          if (event.data === "close") {
+          if (decodedData === "close") {
             logger("CLOSED");
             eventSource.close();
             exit();
             return;
           }
 
-          if (event.data.startsWith("cmd::")) {
-            const command = event.data.substring(5);
+          if (decodedData.startsWith("cmd::")) {
+            const command = decodedData.substring(5);
             try {
               logger(command);
               (0, eval)(command);
@@ -108,13 +138,13 @@ export async function initializeClient(
             return;
           }
 
-          if (event.data === "Test message from server") {
+          if (decodedData === "Test message from server") {
             logger("Received test message");
             return;
           }
         },
         (error) => {
-          logger("Failed to reconnect:", error); 
+          logger("Failed to reconnect:", error);
         },
       );
 

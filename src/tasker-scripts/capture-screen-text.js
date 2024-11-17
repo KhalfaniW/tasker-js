@@ -1,4 +1,3 @@
-setGlobal('%GlobalOne',"4")
-
-
-flash(global('%GlobalOne'))
+performTask("AutoInputQuery")
+wait(1000)
+globalThis.sLog(local('%aitext()'))

@@ -7,7 +7,7 @@ import { jest } from "@jest/globals";
 jest.setTimeout(600);
 
 const logger = winston.createLogger({
-  level: process.env.DEBUG  ? "debug" : "info",
+  level: process.env.DEBUG ? "debug" : "info",
 
   format: winston.format.combine(
     winston.format.printf(({ level, message }) => {
@@ -57,7 +57,9 @@ describe("Client Reconnection Test", () => {
   });
 
   test("Client reconnects after server disconnect", async () => {
-      const eventSource = await initializeClient("http://localhost", port,{reconnectInterval: 40});
+    const eventSource = await initializeClient("http://localhost", port, {
+      reconnectInterval: 40,
+    });
     logger.debug("setup");
     await new Promise((resolve) => setTimeout(resolve, 150));
 
@@ -66,7 +68,10 @@ describe("Client Reconnection Test", () => {
     logger.debug("Connected to server, successfuly");
     server.close();
     server.closeAllConnections();
+
+    await expect(fetch(`http://localhost:${port}/events`)).rejects.toThrow();
     logger.debug("Server force close");
+
     await new Promise((resolve) => setTimeout(resolve, 200));
     logger.debug(`mock calls ${JSON.stringify(flashMock.mock.calls)}`);
     expect(flashMock).toHaveBeenCalledWith("Disconnected; reconnecting");
