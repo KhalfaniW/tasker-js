@@ -1,9 +1,10 @@
 import { postData } from "./client-lib.js";
-import fetch from "node-fetch";
-import EventSource from "eventsource";
 import { Observable, timer } from "rxjs";
 import { retryWhen, delayWhen, tap } from "rxjs/operators";
+
 const isNode = typeof window === "undefined";
+
+const baseUrl = globalThis.baseUrl || "http://localhost";
 
 if (isNode) {
   (async () => {
@@ -11,13 +12,21 @@ if (isNode) {
     globalThis.vibrate = () => {};
     globalThis.exit = () => {};
   })();
+} else {
+  (async () => {
+    const port = 3000;
+
+    window.client = await initializeClient(baseUrl, port, {
+      logger: (str) => postData(`${baseUrl}:${port}/log`, str),
+    });
+    window.initializeClient = initializeClient;
+  })();
 }
 
-/*global flash*/
 export async function initializeClient(
   url = `http://192.168.1.160`,
   port = 3000,
-    { logger = globalThis.flash, reconnectInterval=1000 }={}, 
+  { logger = globalThis.flash, reconnectInterval = 1000 } = {},
 ) {
   try {
     const serverURL = `${url}:${port}/events`;
@@ -35,7 +44,7 @@ export async function initializeClient(
         `${url}:${port}/s-log?log=${encodeURIComponent(str)}`,
       );
     };
-
+    logger("initializing");
     let isReconnecting = false; // Add this variable
     let eventSource; // Declare eventSource in the outer scope
 
@@ -82,8 +91,8 @@ export async function initializeClient(
           logger(["data", event.data]);
 
           if (event.data === "close") {
-            flash("CLOSED");
-            eventSource.close(); // eventSource is now accessible
+            logger("CLOSED");
+            eventSource.close();
             exit();
             return;
           }
@@ -92,29 +101,20 @@ export async function initializeClient(
             const command = event.data.substring(5);
             try {
               logger(command);
-              // (0, eval)(command);
+              (0, eval)(command);
             } catch (e) {
-              logger(`Command execution error: ${e.message}`);
+              logger(`Command ERROR: ${e.message}`);
             }
             return;
           }
 
           if (event.data === "Test message from server") {
             logger("Received test message");
-          }
-          if (event.data.includes("::")) {
-            const [command, value] = event.data.split("::");
-            logger(value);
             return;
-          }
-          try {
-            // (0, eval)(event.data);
-          } catch (e) {
-            logger(`ERROR ${e.message}`);
           }
         },
         (error) => {
-          logger("Failed to reconnect:", error);
+          logger("Failed to reconnect:", error); 
         },
       );
 

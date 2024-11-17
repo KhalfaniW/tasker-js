@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { createInterface } from "readline";
 import path from "path";
 import fs from "fs";
@@ -12,6 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
@@ -25,7 +27,7 @@ const logger = winston.createLogger({
     winston.format.timestamp(),
     winston.format.printf(({ timestamp, level, message }) => {
       return `${timestamp} ${level}: ${message}`;
-    }),
+    })
   ),
   transports: [
     new winston.transports.Console(),
@@ -66,11 +68,11 @@ app.get("/events", (req, res) => {
   });
 });
 
-app.use("/code", express.static(path.join(__dirname, "../build/client.js")));
+app.use("/code", express.static(path.join(__dirname, "../build/bundle.js")));
 
 app.post("/log", (req, res) => {
   const logData = req.body;
-  logger.verbose("Log data received: " + JSON.stringify(logData));
+  logger.info("Log: " + JSON.stringify(logData));
   // If you need to send SSE messages based on log data:
   // sendSSEMessage(clients[0], JSON.stringify(logData));
   res.status(200).json({ message: "Log received successfully", data: logData });
@@ -107,6 +109,20 @@ app.post("/send-command", (req, res) => {
     res.status(200).send("No client connected");
   }
 });
+
+app.post("/run", (req, res) => {
+    const { cmd } = req.body;
+    if (!cmd) {
+        res.status(400).send("Command parameter 'cmd' is required in request body");
+        return;
+    }
+
+    if (sendMessageToClient(clients[0], `cmd::${cmd}`)) {
+        res.status(200).send(`Command "${cmd}" sent successfully`);
+    } else {
+        res.status(200).send("No client connected");
+    }
+});
 function shutdown(server) {
   sendMessageToClient(clients[0], "close");
   logger.verbose("Client connection closed");
@@ -125,11 +141,11 @@ const myApp = {
           // will not run call back until server.closeAllConnection() because of sse connection
           logger.debug("Closed for disconnection");
           resolve();
-        }),
+        })
       );
 
       server.closeAllConnections();
-    };
+    }; 
     return { server, shutdown };
   },
 };

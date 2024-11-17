@@ -15,7 +15,8 @@ export async function postData(url, data = {}) {
     const responseData = await response.json(); // Parse the JSON from the response
     return responseData; // Return the parsed data
   } catch (error) {
-    sLog("error");
+    globalThis.sLog("error");
+    globalThis.sLog(error.message);
     console.error("There was a problem with the fetch operation:", error);
   }
 }

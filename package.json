@@ -7,7 +7,8 @@
   "scripts": {
     "start": "npm run build > ./tmp/build.log & npm run server   & wait",
     "server": "npx nodemon src/server.js",
-    "build": "esbuild ./src/client --bundle --outdir=build --watch=forever",
+    "build": "node build.js",
+    "build-watch": "nodemon --watch ./src/client.js --exec \"npm run build\" ",
     "run-client": "node --watch build/client.js",
     "test": "npm run jest --",
     "tw": "npm run jest --- --watch",
@@ -34,6 +35,12 @@
     "@babel/core": "^7.21.0",
     "@babel/preset-env": "^7.20.2",
     "babel-jest": "^29.5.0",
+    "esbuild-plugin-replace": "^1.4.0",
     "jest": "^29.5.0"
+  },
+  "jest": {
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
+    ]
   }
 }
