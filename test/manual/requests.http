@@ -1,0 +1,38 @@
+
+### Connect to SSE stream
+GET http://localhost:3000/events
+
+### Send test message
+GET http://localhost:3000/send-test-message
+
+### Send command
+POST http://localhost:3000/send-command
+Content-Type: application/json
+
+{
+    "cmd": "test command"
+}
+
+
+### Run command
+POST http://localhost:3000/run
+Content-Type: application/json
+
+{
+    "cmd": "log(8+23); vibrate(500)"
+}
+
+
+### Log data
+POST http://localhost:3000/log
+Content-Type: application/json
+
+{
+    "data": "Test log message"
+}
+
+### Simple log
+GET http://localhost:3000/s-log?log=Test%20simple%20log%20message
+
+### Get client code
+GET http://localhost:3000/code

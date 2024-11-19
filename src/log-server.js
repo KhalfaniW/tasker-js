@@ -29,20 +29,22 @@ const logger = winston.createLogger({
 });
 
 app.post("/log", (req, res) => {
-  const logData = req.body;
-  logger.info("Log: " + JSON.stringify(logData));
+  const logInput = req.body;
+  const logData = logInput.data;
+  logger.info(
+    `Log: ${typeof logData == "object" ? JSON.stringify(logData) : logData}`,
+  );
   // If you need to send SSE messages based on log data:
   // sendSSEMessage(clients[0], JSON.stringify(logData));
   res.status(200).json({ message: "Log received successfully", data: logData });
 });
 
 app.get("/s-log", (req, res) => {
-  const { log: inputLog } = req.query;
-  const log = decodeURIComponent(inputLog);
+  const { log } = req.query;
 
   logger.info(`Simple Loging: ${log}`);
   res.send(`loged ${log}`);
-}); 
+});
 
 app.listen(PORT, () => {
   console.log(`log server is running on port ${PORT}`);

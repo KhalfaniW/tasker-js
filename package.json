@@ -7,6 +7,7 @@
   "scripts": {
     "start": "npm run build > ./tmp/build.log & npm run server   & wait",
     "server": "npx nodemon src/server.js",
+    "log-server": "node src/log-server.js",
     "build": "node build.js",
     "build-watch": "nodemon --watch ./src/client.js --exec \"npm run build\" ",
     "run-client": "node --watch build/client.js",

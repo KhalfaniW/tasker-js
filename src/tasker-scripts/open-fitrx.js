@@ -1,8 +1,5 @@
 vibrate(1000);
 const fitrxApp = "com.fitrx.wondonful.kneadtoolkit";
-loadApp(fitrxApp)
+loadApp(fitrxApp);
 
-log('completed')
-
-
-
+log("completed");

@@ -1,0 +1,157 @@
+
+#+TITLE: Tasker Server API Tests
+
+
+* Setup
+#+begin_src js 
+const baseUrl = 'http://localhost:3000';
+
+async function makeRequest(path, options = {}) {
+  const response = await fetch(`${baseUrl}${path}`, options);
+  return await response.text();
+}
+#+end_src
+
+#+RESULTS:
+: undefined
+
+* Event Stream Connection
+#+begin_src js
+const es = new EventSource(`${baseUrl}/events`);
+es.onmessage = (event) => {
+  console.log('Received:', event.data);
+};
+#+end_src
+
+* Test Message
+#+begin_src js
+  (async ()=>{
+    const baseUrl = 'http://localhost:3000';
+
+    async function makeRequest(path, options = {}) {
+      const response = await fetch(`${baseUrl}${path}`, options);
+      return await response.text();
+    }
+    console.log(await makeRequest('/send-test-message'));
+
+      return '\n\n'
+    })()
+
+#+end_src
+
+#+RESULTS:
+: undefinedTest message sent
+
+* Send Command
+#+begin_src js
+console.log(await makeRequest('/send-command', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ cmd: 'test command' })
+}));
+#+end_src
+
+#+RESULTS:
+
+* Run Command
+*** simple
+#+begin_src js
+    (async ()=>{
+        const fs = await import('fs')
+       const baseUrl = 'http://localhost:3000';
+       async function makeRequest(path, options = {}) {
+         const response = await fetch(`${baseUrl}${path}`, options);
+         return await response.text();
+       }
+       console.log(await makeRequest('/run', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ cmd:'log( global("%AllVars")  )'})
+     }));
+         return '\n\n'
+       })()
+
+
+
+#+end_src
+
+#+RESULTS:
+: undefinedCommand "log( global("%AllVars")  )" sent successfully
+
+
+*** open fit
+#+begin_src js
+    (async ()=>{
+        const fs = await import('fs')
+       const baseUrl = 'http://localhost:3000';
+       async function makeRequest(path, options = {}) {
+         const response = await fetch(`${baseUrl}${path}`, options);
+         return await response.text();
+       }
+       console.log(await makeRequest('/run', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ cmd: fs.readFileSync('/home/khalfani/Projects/tasker-server/src/tasker-scripts/open-fitrx.js','utf8')})
+     }));
+         return '\n\n'
+       })()
+
+
+
+#+end_src
+
+#+RESULTS:
+: undefinedCommand "vibrate(1000);
+: const fitrxApp = "com.fitrx.wondonful.kneadtoolkit";
+: loadApp(fitrxApp);
+: 
+: log("completed");
+: " sent successfully
+*** second command
+#+begin_src js
+    (async ()=>{
+          const fs = await import('fs')
+         const baseUrl = 'http://localhost:3000';
+         async function makeRequest(path, options = {}) {
+           const response = await fetch(`${baseUrl}${path}`, options);
+           return await response.text();
+         }
+         console.log(await makeRequest('/run', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ cmd: fs.readFileSync('/home/khalfani/Projects/tasker-server/src/tasker-scripts/capture-screen-text.js','utf8')})
+       }));
+           return '\n\n'
+         })()
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+undefinedCommand "sLog("00000000000");
+// // performTask("AutoInputQuery",1,'','','',false,true)
+sLog("BEGIN");
+performTask("AutoInputQuery", 99999);
+// // performTask( str taskName, int priority, str parameterOne, str parameterTwo, str returnVariable, bool stop, bool variablePassthrough, str variablePassthroughList, bool resetReturnVariable )
+
+wait(100);
+var x = global("%AllVars");
+//flash(global("%AllVars"))
+
+sLog(x.length);
+
+log(global("%AllVars"));
+
+sLog("END");
+" sent successfully
+#+end_example
+
+: #+RESULTS:undefinedCommand "performTask("AutoInputQuery",1,'','','',false,true)
+: //performTask( str taskName, int priority, str parameterOne, str parameterTwo, str returnVariable, bool stop, bool variablePassthrough, str variablePassthroughList, bool resetReturnVariable )
+: 
+: 
+: wait(100)
+: flash(local('%aiapp'))
+: globalThis.sLog(global('%AllVars'))
+: globalThis.sLog(local('%aitext()'))
+: " sent successfully

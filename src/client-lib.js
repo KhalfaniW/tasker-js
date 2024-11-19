@@ -7,7 +7,7 @@ export async function postData(url, data = {}) {
       },
       body: JSON.stringify({ data }), // Convert data to JSON string
     });
-    // Check if the response is ok (status in the range 200-299)
+
     if (!response.ok) {
       throw new Error("Network response was not ok " + response.statusText);
     }
