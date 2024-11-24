@@ -4,7 +4,7 @@ import { retryWhen, delayWhen, tap } from "rxjs/operators";
 
 const isNode = typeof window === "undefined";
 
-const baseUrl = globalThis.baseUrl || "http://localhost";
+const baseUrl = globalThis.baseUrl || `http://${local('%ip_address')}` ||  "http://localhost";
 
 if (isNode) {
   (async () => {

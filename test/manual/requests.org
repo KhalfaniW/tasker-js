@@ -79,7 +79,7 @@ console.log(await makeRequest('/send-command', {
 : undefinedCommand "log( global("%AllVars")  )" sent successfully
 
 
-*** open fit
+*** open fitrx
 #+begin_src js
     (async ()=>{
         const fs = await import('fs')
@@ -154,4 +154,32 @@ sLog("END");
 : flash(local('%aiapp'))
 : globalThis.sLog(global('%AllVars'))
 : globalThis.sLog(local('%aitext()'))
+: " sent successfully
+*** increase
+#+begin_src js
+    (async ()=>{
+        const fs = await import('fs')
+       const baseUrl = 'http://localhost:3000';
+       async function makeRequest(path, options = {}) {
+         const response = await fetch(`${baseUrl}${path}`, options);
+         return await response.text();
+       }
+       console.log(await makeRequest('/run', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ cmd: fs.readFileSync('/home/khalfani/Projects/tasker-server/src/tasker-scripts/increase-fitrx.js','utf8')})
+     }));
+         return '\n\n'
+       })()
+
+
+
+#+end_src
+
+#+RESULTS:
+: undefinedCommand "vibrate(1000);
+: const fitrxApp = "com.fitrx.wondonful.kneadtoolkit";
+: loadApp(fitrxApp);
+: 
+: log("completed");
 : " sent successfully

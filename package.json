@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "npm run build > ./tmp/build.log & npm run server   & wait",
-    "server": "npx nodemon src/server.js",
+    "dev": "concurrently \"npm run build-watch\" \"npm run server\" \"npm run log-server\"",
+    "server": "nodemon --quiet src/server.js",
     "log-server": "node src/log-server.js",
     "build": "node build.js",
     "build-watch": "nodemon --watch ./src/client.js --exec \"npm run build\" ",
@@ -19,6 +19,7 @@
   "keywords": [],
   "author": "",
   "dependencies": {
+    "concurrently": "^8.2.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "esbuild": "^0.24.0",
